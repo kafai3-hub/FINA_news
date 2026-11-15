@@ -34,6 +34,12 @@ export function prefixRewrite(prefix: string): LocationRewrite {
   };
 }
 
+export function previewAsset(path: string) {
+  if (typeof window === "undefined") return path;
+  const prefix = previewPathPrefix(window.location.hostname, window.location.pathname) ?? "";
+  return `${prefix}${path}`;
+}
+
 export function previewPathRewrite(): LocationRewrite | undefined {
   if (typeof window === "undefined") return undefined;
   const prefix = previewPathPrefix(window.location.hostname, window.location.pathname);

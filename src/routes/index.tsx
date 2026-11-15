@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Deck } from "@/components/deck";
+import { Briefing } from "@/components/briefing";
 
 export const Route = createFileRoute("/")({ component: Home });
 
 function Home() {
-  return <Deck />;
+  return <Briefing />;
 }

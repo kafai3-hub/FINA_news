@@ -55,8 +55,8 @@ function Tip({
   );
 }
 
-function Frame({ children }: { children: ReactNode }) {
-  return <div className="h-72 w-full">{children}</div>;
+function Frame({ children, tall = false }: { children: ReactNode; tall?: boolean }) {
+  return <div className={tall ? "h-96 w-full" : "h-72 w-full"}>{children}</div>;
 }
 
 export function OpenChart() {
@@ -108,7 +108,7 @@ export function OpenChart() {
 
 export function YieldChart() {
   return (
-    <Frame>
+    <Frame tall>
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={yields} layout="vertical" margin={{ top: 4, right: 36, left: 8, bottom: 4 }}>
           <CartesianGrid stroke={grid} horizontal={false} />
