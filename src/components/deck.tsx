@@ -76,6 +76,7 @@ export function Deck() {
     };
     engineRef.current = engine;
     let cancelled = false;
+    let gate = 0;
 
     const video = videoRef.current;
     if (video) {
@@ -103,23 +104,23 @@ export function Deck() {
           cursor += buffer.duration;
           return start;
         });
-        if (ctx.state === "suspended") {
-          try {
-            await ctx.resume();
-          } catch {
-            /* policy blocked the resume */
-          }
-        }
-        if (cancelled) return;
-        if (ctx.state === "running") {
-          schedule(engine, 0);
+        const begin = () => {
+          if (cancelled || engine.playing || ctx.state !== "running") return;
+          schedule(engine, engine.position);
           setPlaying(true);
           setNeedsSound(false);
           setSound("running");
-        } else {
-          setNeedsSound(true);
-          setSound("blocked");
-        }
+        };
+        ctx.onstatechange = begin;
+        void ctx.resume();
+        gate = window.setTimeout(() => {
+          if (cancelled || engine.playing) return;
+          if (ctx.state === "running") begin();
+          else {
+            setNeedsSound(true);
+            setSound("blocked");
+          }
+        }, 400);
       } catch {
         if (!cancelled) {
           setNeedsSound(true);
@@ -154,6 +155,7 @@ export function Deck() {
     return () => {
       cancelled = true;
       window.clearInterval(timer);
+      window.clearTimeout(gate);
       stopSources(engine);
       void ctx.close();
       engineRef.current = null;
