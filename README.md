@@ -1,7 +1,27 @@
-# Alphabet HKD Brief
+# Alphabet’s first Hong Kong dollar bonds
 
-Chart briefing on Alphabet’s first Hong Kong dollar bonds, priced 12 November 2026.
+FINA news · 12 November 2026 · Aa2 / AA+
 
-The show is eight charts, not a memo: local comps, the tighten from initial price talk, tranche size, order books, HIBOR versus coupon, the issuer’s debt and cash gap, and duration versus yield pickup. Press **Play briefing** for narration and on-screen captions. A rendered cut is at `public/briefing.mp4`.
+**Play the two-minute briefing (with narration):** [briefing.mp4](public/briefing.mp4)
 
-Figures follow reported term sheets (Reuters) and secondary HKD indications around the launch (MTR, Airport Authority, HK Electric). Durations on the last chart are illustrative.
+[PDF of the charts](public/alphabet-hkd-brief.pdf)
+
+![HK$16bn print, 5.20% ten-year, +102bp versus MTR 2036](docs/00-header.png)
+
+![About US$3.8bn, HKD and SGD, and the Hong Kong dollar reoffer](docs/01.png)
+
+![Alphabet yields versus MTR, Airport Authority and HK Electric](docs/02.png)
+
+![Initial price talk tightened 25 to 30 basis points](docs/03.png)
+
+![Most of the Hong Kong dollar size is in the two-year and five-year](docs/04.png)
+
+![Hong Kong dollar orders were about twice the print](docs/05.png)
+
+![The gap over one-month HIBOR is not locked](docs/06.png)
+
+![Debt is up and third-quarter capex exceeded operating cash flow](docs/07.png)
+
+![The yield pickup is the payment for duration](docs/08.png)
+
+Figures follow reported term sheets and secondary Hong Kong dollar indications around the launch. Duration moves on the last chart are approximate.
