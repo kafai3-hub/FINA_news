@@ -56,12 +56,12 @@ function Tip({
 }
 
 function Frame({ children }: { children: ReactNode }) {
-  return <div className="h-64 w-full sm:h-72 lg:h-full lg:min-h-64">{children}</div>;
+  return <div className="h-72 w-full">{children}</div>;
 }
 
 export function OpenChart() {
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:h-full">
+    <div className="grid gap-4 md:grid-cols-2">
       <Frame>
         <p className="mb-1 text-sm font-medium text-ink/70">US$ bn equivalent</p>
         <ResponsiveContainer width="100%" height="78%">
@@ -147,7 +147,7 @@ export function TightenChart() {
 
 export function SizeChart() {
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:h-full">
+    <div className="grid gap-4 md:grid-cols-2">
       <Frame>
         <p className="mb-2 text-sm font-medium text-ink/70">HKD, HK$ bn</p>
         <ResponsiveContainer width="100%" height="85%">
@@ -182,7 +182,7 @@ export function SizeChart() {
 
 export function BooksChart() {
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:h-full">
+    <div className="grid gap-4 md:grid-cols-2">
       <Frame>
         <p className="mb-2 text-sm font-medium text-ink/70">Hong Kong dollar, HK$ bn</p>
         <ResponsiveContainer width="100%" height="85%">
@@ -244,7 +244,7 @@ export function CarryChart() {
 
 export function IssuerChart() {
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:h-full">
+    <div className="grid gap-4 md:grid-cols-2">
       <Frame>
         <p className="mb-2 text-sm font-medium text-ink/70">Long-term debt, US$ bn</p>
         <ResponsiveContainer width="100%" height="85%">
@@ -282,8 +282,8 @@ export function IssuerChart() {
 
 export function RiskChart() {
   return (
-    <div className="grid gap-4 md:grid-cols-5 lg:h-full">
-      <div className="h-64 md:col-span-3 lg:h-full">
+    <div className="grid gap-6 md:grid-cols-5">
+      <div className="h-72 md:col-span-3">
         <p className="mb-2 text-sm font-medium text-ink/70">Approx. price change, %</p>
         <ResponsiveContainer width="100%" height="85%">
           <BarChart data={rateShock} margin={{ top: 16, right: 8, left: 0, bottom: 0 }}>
@@ -298,7 +298,7 @@ export function RiskChart() {
           </BarChart>
         </ResponsiveContainer>
       </div>
-      <div className="h-64 md:col-span-2 lg:h-full">
+      <div className="h-72 md:col-span-2">
         <p className="mb-2 text-sm font-medium text-ink/70">Pickup vs named comp, bp</p>
         <ResponsiveContainer width="100%" height="85%">
           <BarChart data={pickup} layout="vertical" margin={{ top: 8, right: 28, left: 8, bottom: 0 }}>

@@ -83,6 +83,8 @@ export type Slide = {
   note: string;
 };
 
+export const cueStarts = [0, 15.41, 36.89, 50.38, 66.75, 80.24, 95, 114.9];
+
 export const slides: Slide[] = [
   {
     id: "open",
