@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Pause, Play } from "lucide-react";
-import { cueStarts, slides } from "@/data/brief";
+import { slides } from "@/data/brief";
 import { chartFor } from "@/components/charts";
 import { previewPathPrefix } from "@/lib/preview-path-prefix";
 
@@ -10,92 +10,206 @@ function asset(path: string) {
   return `${prefix}${path}`;
 }
 
+type Engine = {
+  ctx: AudioContext;
+  buffers: AudioBuffer[];
+  offsets: number[];
+  sources: AudioBufferSourceNode[];
+  origin: number;
+  position: number;
+  playing: boolean;
+};
+
+function stopSources(engine: Engine) {
+  for (const source of engine.sources) {
+    try {
+      source.onended = null;
+      source.stop();
+    } catch {
+      /* already stopped */
+    }
+    source.disconnect();
+  }
+  engine.sources = [];
+}
+
+function schedule(engine: Engine, from: number) {
+  stopSources(engine);
+  const when0 = engine.ctx.currentTime + 0.05;
+  engine.position = from;
+  engine.origin = when0 - from;
+  engine.playing = true;
+  engine.buffers.forEach((buffer, i) => {
+    const start = engine.offsets[i];
+    const end = start + buffer.duration;
+    if (end <= from + 0.01) return;
+    const offset = Math.max(0, from - start);
+    const source = engine.ctx.createBufferSource();
+    source.buffer = buffer;
+    source.connect(engine.ctx.destination);
+    source.start(when0 + (start + offset - from), offset);
+    engine.sources.push(source);
+  });
+}
+
 export function Deck() {
   const [index, setIndex] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [needsSound, setNeedsSound] = useState(false);
+  const [sound, setSound] = useState<"loading" | "running" | "blocked" | "error">("loading");
   const videoRef = useRef<HTMLVideoElement>(null);
+  const engineRef = useRef<Engine | null>(null);
 
   const slide = slides[index];
   const Chart = chartFor[slide.id];
 
   useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
-    video.src = asset("/briefing.mp4");
-    video.poster = asset("/poster.png");
+    const ctx = new AudioContext();
+    const engine: Engine = {
+      ctx,
+      buffers: [],
+      offsets: [],
+      sources: [],
+      origin: 0,
+      position: 0,
+      playing: false,
+    };
+    engineRef.current = engine;
     let cancelled = false;
 
-    async function start(clip: HTMLVideoElement) {
-      clip.muted = false;
+    const video = videoRef.current;
+    if (video) {
+      video.muted = true;
+      video.src = asset("/briefing.mp4");
+      video.poster = asset("/poster.png");
+      void video.play().catch(() => undefined);
+    }
+
+    async function arm() {
       try {
-        await clip.play();
-        if (!cancelled) setPlaying(true);
-      } catch {
-        clip.muted = true;
-        try {
-          await clip.play();
-          if (!cancelled) {
-            setPlaying(true);
-            setNeedsSound(true);
+        const buffers = await Promise.all(
+          slides.map(async (item) => {
+            const response = await fetch(asset(item.audio));
+            if (!response.ok) throw new Error(`audio ${response.status}`);
+            const bytes = await response.arrayBuffer();
+            return ctx.decodeAudioData(bytes);
+          }),
+        );
+        if (cancelled) return;
+        engine.buffers = buffers;
+        let cursor = 0;
+        engine.offsets = buffers.map((buffer) => {
+          const start = cursor;
+          cursor += buffer.duration;
+          return start;
+        });
+        if (ctx.state === "suspended") {
+          try {
+            await ctx.resume();
+          } catch {
+            /* policy blocked the resume */
           }
-        } catch {
-          if (!cancelled) setNeedsSound(true);
+        }
+        if (cancelled) return;
+        if (ctx.state === "running") {
+          schedule(engine, 0);
+          setPlaying(true);
+          setNeedsSound(false);
+          setSound("running");
+        } else {
+          setNeedsSound(true);
+          setSound("blocked");
+        }
+      } catch {
+        if (!cancelled) {
+          setNeedsSound(true);
+          setSound("error");
         }
       }
     }
 
-    void start(video);
+    function tick() {
+      const current = engineRef.current;
+      if (!current?.playing) return;
+      const time = current.ctx.currentTime - current.origin;
+      let next = 0;
+      for (let i = 0; i < current.offsets.length; i += 1) {
+        if (time >= current.offsets[i]) next = i;
+      }
+      setIndex((value) => (value === next ? value : next));
+      const clip = videoRef.current;
+      if (clip && Number.isFinite(clip.duration) && Math.abs(clip.currentTime - time) > 0.45) {
+        clip.currentTime = Math.min(time, clip.duration);
+      }
+      const last = current.buffers.at(-1);
+      const end = last ? current.offsets[current.offsets.length - 1] + last.duration : 0;
+      if (time >= end - 0.05) {
+        current.playing = false;
+        setPlaying(false);
+      }
+    }
+
+    void arm();
+    const timer = window.setInterval(tick, 200);
     return () => {
       cancelled = true;
+      window.clearInterval(timer);
+      stopSources(engine);
+      void ctx.close();
+      engineRef.current = null;
     };
   }, []);
 
-  function onTime() {
-    const time = videoRef.current?.currentTime ?? 0;
-    let next = 0;
-    for (let i = 0; i < cueStarts.length; i += 1) {
-      if (time >= cueStarts[i]) next = i;
+  async function resumeAt(position: number) {
+    const engine = engineRef.current;
+    if (!engine || engine.buffers.length === 0) return;
+    try {
+      await engine.ctx.resume();
+    } catch {
+      setNeedsSound(true);
+      return;
     }
-    setIndex((current) => (current === next ? current : next));
+    if (engine.ctx.state !== "running") {
+      engine.position = position;
+      setNeedsSound(true);
+      setSound("blocked");
+      return;
+    }
+    schedule(engine, position);
+    setPlaying(true);
+    setNeedsSound(false);
+    setSound("running");
+    const video = videoRef.current;
+    if (video) {
+      video.muted = true;
+      video.currentTime = position;
+      void video.play().catch(() => undefined);
+    }
   }
 
   function playFrom(i: number) {
-    const video = videoRef.current;
+    const engine = engineRef.current;
     const next = (i + slides.length) % slides.length;
     setIndex(next);
-    if (!video) return;
-    video.muted = false;
-    video.currentTime = cueStarts[next] ?? 0;
-    void video
-      .play()
-      .then(() => {
-        setPlaying(true);
-        setNeedsSound(false);
-      })
-      .catch(() => setNeedsSound(true));
+    void resumeAt(engine?.offsets[next] ?? 0);
   }
 
   function togglePlay() {
-    const video = videoRef.current;
-    if (!video) return;
-    if (!video.paused) {
-      video.pause();
+    const engine = engineRef.current;
+    if (!engine) return;
+    if (engine.playing) {
+      engine.position = Math.max(0, engine.ctx.currentTime - engine.origin);
+      engine.playing = false;
+      stopSources(engine);
       setPlaying(false);
+      videoRef.current?.pause();
       return;
     }
-    video.muted = false;
-    void video
-      .play()
-      .then(() => {
-        setPlaying(true);
-        setNeedsSound(false);
-      })
-      .catch(() => setNeedsSound(true));
+    void resumeAt(engine.position);
   }
 
   return (
-    <div className="min-h-dvh bg-paper text-ink lg:flex">
+    <div className="min-h-dvh bg-paper text-ink lg:flex" data-sound={sound}>
       <aside className="flex shrink-0 gap-2 overflow-x-auto border-b border-ink/10 px-3 py-3 lg:w-56 lg:flex-col lg:overflow-y-auto lg:border-r lg:border-b-0 lg:px-4 lg:py-6">
         <div className="hidden lg:block">
           <p className="font-serif text-xl tracking-tight">FINA News</p>
@@ -147,13 +261,8 @@ export function Deck() {
               controls
               playsInline
               autoPlay
+              muted
               preload="auto"
-              onTimeUpdate={onTime}
-              onPlay={() => setPlaying(true)}
-              onPause={() => {
-                if (videoRef.current?.ended) setPlaying(false);
-              }}
-              onEnded={() => setPlaying(false)}
             />
             {needsSound ? (
               <button
